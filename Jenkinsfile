@@ -62,3 +62,33 @@ pipeline {
         }
     }
 } 
+pipeline {
+    agent any
+    
+    environment {
+        SELENOID_URL = 'http://selenoid:4444/wd/hub'
+        MAVEN_HOME = tool 'Maven 3.8.4'
+        JAVA_HOME = tool 'JDK 17'
+        PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
+    }
+    
+    tools {
+        maven 'Maven 3.8.6'
+        jdk 'JDK 17'
+    }
+    
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Building..'
+                sh 'mvn clean install -DskipTests'
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Testing..'
+                sh 'mvn test'
+            }
+        }
+    }
+}
