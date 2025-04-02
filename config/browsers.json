@@ -1,0 +1,38 @@
+{
+    "chrome": {
+        "default": "latest",
+        "versions": {
+            "latest": {
+                "image": "selenoid/chrome:latest",
+                "port": "4444",
+                "path": "/",
+                "tmpfs": {
+                    "/tmp": "size=512m"
+                },
+                "env": [
+                    "TZ=Europe/Istanbul",
+                    "LANG=tr_TR.UTF-8"
+                ],
+                "shmSize": "2g"
+            }
+        }
+    },
+    "firefox": {
+        "default": "latest",
+        "versions": {
+            "latest": {
+                "image": "selenoid/firefox:latest",
+                "port": "4444",
+                "path": "/wd/hub",
+                "tmpfs": {
+                    "/tmp": "size=512m"
+                },
+                "env": [
+                    "TZ=Europe/Istanbul",
+                    "LANG=tr_TR.UTF-8"
+                ],
+                "shmSize": "2g"
+            }
+        }
+    }
+} 
