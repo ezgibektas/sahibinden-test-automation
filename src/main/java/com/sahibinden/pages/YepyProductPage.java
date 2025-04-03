@@ -56,9 +56,15 @@ public class YepyProductPage extends BasePage {
         super(driver);
     }
 
-    public void setResponsiveMode(boolean isResponsive) {
-        this.isResponsiveMode = isResponsive;
-        logger.info("Responsive mode set to: {}", isResponsive ? "enabled" : "disabled");
+    public boolean setResponsiveMode(boolean isResponsive) {
+        try {
+            this.isResponsiveMode = isResponsive;
+            logger.info("Responsive mode set to: {}", isResponsive ? "enabled" : "disabled");
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to set responsive mode: {}", e.getMessage());
+            return false;
+        }
     }
 
     public boolean detectResponsiveMode() {
@@ -79,8 +85,7 @@ public class YepyProductPage extends BasePage {
             logger.info("First phone title: {}, price: {}", title, price);
 
             clickElement(firstPhone);
-            
-            // Detay sayfası başlığının görünür olmasını bekle
+
             WebElement detailTitle = waitForElementToBeVisible(By.xpath("//div[@class='refurb-section-infos']//h1[contains(@class,'sui-global-surface-page-title refurb-section-infos-title sui-color-emphasis-high')]"));
             if (detailTitle != null) {
                 logger.info("Successfully navigated to phone detail page");
@@ -112,10 +117,6 @@ public class YepyProductPage extends BasePage {
 
     public String getFirstPhonePrice() {
         return getElementText(firstPhonePrice);
-    }
-
-    public String getDetailPageTitle() {
-        return getElementText(firstPhoneDetailTitle);
     }
 
     public String getDetailPagePrice() {
@@ -218,26 +219,22 @@ public class YepyProductPage extends BasePage {
     public boolean verifyPriceConsistency() {
         try {
             logger.info("Verifying price consistency between listing and detail pages");
-            
-            // Liste sayfasındaki fiyatı al
+
             String listingPrice = getFirstPhonePrice();
             logger.info("Listing page price: {}", listingPrice);
-            
-            // İlk telefonu tıkla
+
             if (!clickFirstPhone()) {
                 logger.error("Failed to navigate to detail page");
                 return false;
             }
-            
-            // Detay sayfasındaki fiyatı al
+
             String detailPrice = getDetailPagePrice();
             logger.info("Detail page price: {}", detailPrice);
+
+            long cleanListingPrice = parsePrice(listingPrice);
+            long cleanDetailPrice = parsePrice(detailPrice);
             
-            // Fiyatları temizle ve karşılaştır
-            String cleanListingPrice = listingPrice.replaceAll("[^0-9]", "");
-            String cleanDetailPrice = detailPrice.replaceAll("[^0-9]", "");
-            
-            if (cleanListingPrice.equals(cleanDetailPrice)) {
+            if (cleanListingPrice == cleanDetailPrice) {
                 logger.info("Price consistency verified successfully");
                 return true;
             } else {
@@ -246,6 +243,76 @@ public class YepyProductPage extends BasePage {
             }
         } catch (Exception e) {
             logger.error("Error verifying price consistency: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private long parsePrice(String priceText) {
+        if (priceText == null || priceText.trim().isEmpty()) {
+            logger.warn("Empty price text provided");
+            return 0;
+        }
+        
+        try {
+            String cleanPrice = priceText.replaceAll("[^0-9]", "");
+            logger.debug("Cleaned price text from '{}' to '{}'", priceText, cleanPrice);
+            
+            if (cleanPrice.isEmpty()) {
+                logger.warn("No numeric characters found in price text: {}", priceText);
+                return 0;
+            }
+            
+            return Long.parseLong(cleanPrice);
+        } catch (NumberFormatException e) {
+            logger.error("Failed to parse price from text: {}", priceText, e);
+            return 0;
+        }
+    }
+
+    public long getProductPrice() {
+        try {
+            detectResponsiveMode();
+            
+            WebElement priceElement = isResponsiveMode ? mobileApplePriceList.get(0) : firstPhonePrice;
+            waitForElementVisible(priceElement, "Product price element");
+            
+            String priceText = priceElement.getText().trim();
+            logger.info("Raw product price: {}", priceText);
+            
+            long price = parsePrice(priceText);
+            logger.info("Parsed product price: {}", price);
+            
+            return price;
+        } catch (Exception e) {
+            logger.error("Error getting product price: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    public boolean verifyProductDetails() {
+        try {
+            logger.info("Verifying product details");
+            WebElement productDetailElement = isResponsiveMode ? mobileApplePhoneList.get(0) : firstPhone;
+            waitForElementVisible(productDetailElement, "Product name element");
+            
+            String productNameText = productDetailElement.getText().trim();
+            logger.info("Product name: {}", productNameText);
+            
+            if (productNameText.isEmpty()) {
+                logger.error("Product name is empty");
+                return false;
+            }
+            
+            long price = getProductPrice();
+            if (price <= 0) {
+                logger.error("Invalid product price: " + price);
+                return false;
+            }
+            
+            logger.info("Product details verified successfully");
+            return true;
+        } catch (Exception e) {
+            logger.error("Error verifying product details: {}", e.getMessage());
             return false;
         }
     }

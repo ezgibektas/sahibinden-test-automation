@@ -69,7 +69,7 @@ public class YepyFilterPage extends BasePage {
     @FindBy(xpath = "//button[@class='sui-button rfb-btn-bottom']")
     private WebElement mobileFilterApplyButton;
 
-    @FindBy(xpath = "//button[contains(@class, 'sui-button') and contains(text(), 'Sonuçları Göster')]")
+    @FindBy(xpath = "//button[contains(text(), 'Sonuçları Listele') or contains(text(), 'Sonuçları Göster')]")
     private WebElement mobileShowResultsButton;
 
     @FindBy(xpath = "//a[@class='mui-btn ng-scope']")
@@ -80,6 +80,24 @@ public class YepyFilterPage extends BasePage {
 
     @FindBy(xpath = "//button[@class='sui-button rfb-btn-bottom']")
     private WebElement mobileApplyButton;
+
+    @FindBy(xpath = "//input[@id='fair']")
+    private WebElement fairConditionCheckbox;
+
+    @FindBy(xpath = "//button[contains(text(), 'Filtrele') or contains(text(), 'Ara')]")
+    private WebElement filterButton;
+    
+    @FindBy(xpath = "//a[@title='İyi']")
+    private WebElement fairConditionLabel;
+
+    @FindBy(xpath = "(//li[@class='item ng-scope has-selected-data'])[2]")
+    private WebElement mobileCosmeticConditionFilter;
+
+    @FindBy(xpath = "//button[contains(text(), 'Uygula')]")
+    private WebElement mobileApplyFilterButton;
+
+    @FindBy(xpath = "//span[@class='sui-global-surface-body ng-binding ng-scope']")
+    private WebElement mobileFairConditionSelectedLabel;
 
     private boolean isResponsiveMode = false;
 
@@ -93,9 +111,15 @@ public class YepyFilterPage extends BasePage {
         super(driver);
     }
 
-    public void setResponsiveMode(boolean isResponsive) {
-        this.isResponsiveMode = isResponsive;
-        logger.info("Responsive mode set to: {}", isResponsive ? "enabled" : "disabled");
+    public boolean setResponsiveMode(boolean isResponsive) {
+        try {
+            this.isResponsiveMode = isResponsive;
+            logger.info("Responsive mode set to: {}", isResponsive ? "enabled" : "disabled");
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to set responsive mode: {}", e.getMessage());
+            return false;
+        }
     }
 
     public boolean sortByPrice(SortOrder order) {
@@ -120,11 +144,16 @@ public class YepyFilterPage extends BasePage {
                 waitForElementVisible(option);
                 clickElement(option);
             }
+
+            waitForCondition(driver -> {
+                try {
+                    return !phoneList.isEmpty() && isElementDisplayed(phoneList.get(0));
+                } catch (Exception e) {
+                    return false;
+                }
+            }, 10, "Price sorting results to be visible");
             
-            // Sayfanın yüklenmesi için bekle
-            Thread.sleep(3000);
             waitForPageLoad();
-            
             logger.info("Price sorting {} applied", order);
             return true;
         } catch (Exception e) {
@@ -149,11 +178,11 @@ public class YepyFilterPage extends BasePage {
             
             if (sorted) {
                 logger.info("Prices are correctly sorted {}", expectedOrder);
+                return true;
             } else {
                 logger.error("Prices are NOT sorted {}", expectedOrder);
+                return false;
             }
-            
-            return sorted;
         } catch (Exception e) {
             logger.error("Error verifying price sorting: {}", e.getMessage());
             return false;
@@ -163,28 +192,21 @@ public class YepyFilterPage extends BasePage {
     private List<Long> extractPrices() {
         List<Long> prices = new ArrayList<>();
         try {
-            // Önce telefon listesinin yüklenmesini bekle
             waitForElementVisible(phoneList.get(0));
             logger.info("Found {} phone elements", phoneList.size());
             
             for (WebElement phone : phoneList) {
                 try {
-                    // Fiyat elementini bul
                     WebElement priceElement = phone.findElement(By.xpath(".//div[@class='classified-price-container refurbishment-classified-price-container sui-global-surface-body-lead-bold']"));
                     String priceText = priceElement.getText().trim();
                     logger.info("Raw price text: {}", priceText);
                     
-                    String cleanPrice = priceText.replaceAll("[^0-9]", "");
-                    logger.info("Cleaned price text: {}", cleanPrice);
-                    
-                    if (!cleanPrice.isEmpty()) {
-                        try {
-                            long price = Long.parseLong(cleanPrice);
-                            prices.add(price);
-                            logger.info("Successfully parsed price: {}", price);
-                        } catch (NumberFormatException e) {
-                            logger.warn("Could not parse price: {}", priceText);
-                        }
+                    long price = parsePrice(priceText);
+                    if (price > 0) {
+                        prices.add(price);
+                        logger.info("Successfully parsed price: {}", price);
+                    } else {
+                        logger.warn("Invalid or zero price parsed from: {}", priceText);
                     }
                 } catch (Exception e) {
                     logger.warn("Error processing phone element: {}", e.getMessage());
@@ -196,6 +218,28 @@ public class YepyFilterPage extends BasePage {
             logger.error("Error extracting prices: {}", e.getMessage());
         }
         return prices;
+    }
+
+    private long parsePrice(String priceText) {
+        if (priceText == null || priceText.trim().isEmpty()) {
+            logger.warn("Empty price text provided");
+            return 0;
+        }
+        
+        try {
+            String cleanPrice = priceText.replaceAll("[^0-9]", "");
+            logger.debug("Cleaned price text from '{}' to '{}'", priceText, cleanPrice);
+            
+            if (cleanPrice.isEmpty()) {
+                logger.warn("No numeric characters found in price text: {}", priceText);
+                return 0;
+            }
+            
+            return Long.parseLong(cleanPrice);
+        } catch (NumberFormatException e) {
+            logger.error("Failed to parse price from text: {}", priceText, e);
+            return 0;
+        }
     }
 
     private boolean verifyPriceOrder(List<Long> prices, SortOrder expectedOrder) {
@@ -258,14 +302,16 @@ public class YepyFilterPage extends BasePage {
         clickElement(searchButton);
         logger.info("Clicked on the search button");
 
-        // Sayfanın yüklenmesi için bekle
-        try {
-            Thread.sleep(5000);
-            waitForPageLoad();
-            logger.info("Waited for page to load after applying price filter");
-        } catch (InterruptedException e) {
-            logger.error("Error while waiting for page load: {}", e.getMessage());
-        }
+        waitForCondition(driver -> {
+            try {
+                return !phoneList.isEmpty() && isElementDisplayed(phoneList.get(0));
+            } catch (Exception e) {
+                return false;
+            }
+        }, 10, "Filtered price results to be visible");
+        
+        waitForPageLoad();
+        logger.info("Price filter applied successfully");
     }
 
     public boolean verifyAllPhonesAreBelowPrice(long maxPrice) {
@@ -347,19 +393,110 @@ public class YepyFilterPage extends BasePage {
         waitForElementVisible(applePhone);
         clickElement(applePhone);
         logger.info("Applied Apple filter in desktop view");
+
+        waitForCondition(driver -> {
+            try {
+                return !phoneList.isEmpty() && isElementDisplayed(phoneList.get(0));
+            } catch (Exception e) {
+                return false;
+            }
+        }, 10, "Apple filtered results to be visible");
         
-        // Sayfanın yüklenmesi için bekle
-        try {
-            Thread.sleep(3000);
-            waitForPageLoad();
-            logger.info("Waited for page to load after applying Apple filter");
-        } catch (InterruptedException e) {
-            logger.error("Error while waiting for page load: {}", e.getMessage());
-        }
+        waitForPageLoad();
+        logger.info("Apple filter applied successfully");
     }
 
     @Override
     public boolean detectResponsiveMode() {
         return super.detectResponsiveMode();
+    }
+
+    public boolean filterFairConditionPhones() {
+        try {
+            logger.info("Filtering phones with 'Fair' condition");
+            detectResponsiveMode();
+            
+            waitForElementVisible(fairConditionCheckbox);
+            clickElement(fairConditionCheckbox);
+            logger.info("Clicked on 'Fair condition' checkbox");
+            
+            waitForElementVisible(filterButton);
+            clickElement(filterButton);
+            logger.info("Clicked on filter button");
+            
+            waitForPageLoad();
+            return true;
+        } catch (Exception e) {
+            logger.error("Error filtering fair condition phones: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean verifyFairConditionFilterApplied() {
+        try {
+            logger.info("Verifying 'Fair' condition filter was applied");
+            Thread.sleep(5000);
+            waitForElementVisible(fairConditionLabel);
+            
+            boolean isVisible = isElementDisplayed(fairConditionLabel);
+            logger.info("Fair condition filter label is visible: {}", isVisible);
+            
+            return isVisible;
+        } catch (Exception e) {
+            logger.error("Error verifying fair condition filter: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean filterMobileFairConditionPhones() {
+        try {
+            logger.info("Filtering phones with 'Fair' condition in mobile view");
+            detectResponsiveMode();
+
+            waitForElementVisible(mobileFilterButton);
+            clickElement(mobileFilterButton);
+            logger.info("Clicked on mobile filter button");
+
+            waitForElementVisible(mobileCosmeticConditionFilter);
+            clickElement(mobileCosmeticConditionFilter);
+            logger.info("Clicked on cosmetic condition filter");
+
+            waitForElementVisible(fairConditionCheckbox);
+            clickElement(fairConditionCheckbox);
+            logger.info("Clicked on 'Fair condition' checkbox");
+
+            waitForElementVisible(mobileApplyFilterButton);
+            clickElement(mobileApplyFilterButton);
+            logger.info("Clicked on apply filter button");
+            waitForElementVisible(mobileShowResultsButton);
+            clickElement(mobileShowResultsButton);
+            logger.info("Clicked on show results button");
+
+
+            waitForPageLoad();
+            return true;
+        } catch (Exception e) {
+            logger.error("Error filtering fair condition phones in mobile view: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean verifyMobileFairConditionFilterApplied() {
+        try {
+            logger.info("Verifying 'Fair' condition filter was applied in mobile view");
+            waitForElementVisible(mobileFilterButton);
+            clickElement(mobileFilterButton);
+            logger.info("Clicked on mobile filter button");
+
+            waitForElementVisible(mobileFairConditionSelectedLabel);
+            
+            boolean isVisible = isElementDisplayed(mobileFairConditionSelectedLabel);
+            logger.info("Fair condition filter selected label is visible: {}", isVisible);
+            
+            return isVisible;
+        } catch (Exception e) {
+            logger.error("Error verifying fair condition filter in mobile view: {}", e.getMessage());
+            return false;
+        }
     }
 } 

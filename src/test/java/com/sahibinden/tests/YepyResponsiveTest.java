@@ -54,6 +54,7 @@ public class YepyResponsiveTest extends BaseTest {
     public void shouldNavigateToYepyRefurbishedPhones() {
         assertTrue(navigationPage.navigateToRefurbishedPhonesSection("mobile"), 
             "Failed to navigate to Refurbished Phones section in mobile view");
+        takeScreenshot("mobile_refurbished_phones_page");
     }
 
     @Test
@@ -62,10 +63,13 @@ public class YepyResponsiveTest extends BaseTest {
     public void shouldSortPhonesByPriceHighToLow() {
         assertTrue(navigationPage.navigateToRefurbishedPhonesSection("mobile"), 
             "Failed to navigate to Refurbished Phones section in mobile view");
+        
         assertTrue(filterPage.sortByPrice(YepyFilterPage.SortOrder.HIGH_TO_LOW), 
             "Failed to sort by price high to low in mobile view");
+        
         assertTrue(filterPage.verifyPriceSorting(YepyFilterPage.SortOrder.HIGH_TO_LOW), 
             "Prices are not sorted high to low in mobile view");
+        takeScreenshot("mobile_sort_high_to_low");
     }
 
     @Test
@@ -74,10 +78,13 @@ public class YepyResponsiveTest extends BaseTest {
     public void shouldSortPhonesByPriceLowToHigh() {
         assertTrue(navigationPage.navigateToRefurbishedPhonesSection("mobile"), 
             "Failed to navigate to Refurbished Phones section in mobile view");
+        
         assertTrue(filterPage.sortByPrice(YepyFilterPage.SortOrder.LOW_TO_HIGH), 
             "Failed to sort by price low to high in mobile view");
+        
         assertTrue(filterPage.verifyPriceSorting(YepyFilterPage.SortOrder.LOW_TO_HIGH), 
             "Prices are not sorted low to high in mobile view");
+        takeScreenshot("mobile_sort_low_to_high");
     }
 
     @Test
@@ -86,10 +93,13 @@ public class YepyResponsiveTest extends BaseTest {
     public void shouldFilterPhonesByMaximumPrice() {
         assertTrue(navigationPage.navigateToRefurbishedPhonesSection("mobile"), 
             "Failed to navigate to Refurbished Phones section in mobile view");
+        
         assertTrue(filterPage.setMaximumPriceFilter("10000"), 
             "Failed to set maximum price filter in mobile view");
+        
         assertTrue(filterPage.verifyAllPhonesAreBelowPrice(10000), 
             "Not all phones are below the maximum price in mobile view");
+        takeScreenshot("mobile_max_price_filter");
     }
 
     @Test
@@ -98,10 +108,13 @@ public class YepyResponsiveTest extends BaseTest {
     public void shouldFilterAndVerifyApplePhones() {
         assertTrue(navigationPage.navigateToRefurbishedPhonesSection("mobile"), 
             "Failed to navigate to Refurbished Phones section in mobile view");
+        
         assertTrue(filterPage.clickApplePhoneFilter(), 
             "Failed to apply Apple phone filter in mobile view");
+        
         assertTrue(productPage.verifyAllPhonesAreApple(), 
             "Not all phones are Apple products in mobile view");
+        takeScreenshot("mobile_apple_filter");
     }
 
     @Test
@@ -110,7 +123,22 @@ public class YepyResponsiveTest extends BaseTest {
     public void shouldVerifyPriceConsistency() {
         assertTrue(navigationPage.navigateToRefurbishedPhonesSection("mobile"), 
             "Failed to navigate to Refurbished Phones section in mobile view");
+        
         assertTrue(productPage.verifyPriceConsistency(), 
             "Prices are not consistent between listing and detail pages in mobile view");
+        takeScreenshot("mobile_price_consistency");
+    }
+
+    @Test
+    @Order(7)
+    @DisplayName("Should filter phones by fair condition in mobile view")
+    public void shouldFilterPhonesByFairCondition() {
+        assertTrue(navigationPage.navigateToRefurbishedPhonesSection("mobile"), 
+            "Failed to navigate to Refurbished Phones section in mobile view");
+        assertTrue(filterPage.filterMobileFairConditionPhones(), 
+            "Failed to filter phones by fair condition in mobile view");
+        assertTrue(filterPage.verifyMobileFairConditionFilterApplied(), 
+            "Fair condition filter selected label is not visible in mobile view");
+        takeScreenshot("mobile_fair_condition_filter");
     }
 } 

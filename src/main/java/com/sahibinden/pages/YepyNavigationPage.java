@@ -12,12 +12,14 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import java.util.function.Function;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 
 @Component
 public class YepyNavigationPage extends BasePage {
     private static final Logger logger = LoggerFactory.getLogger(YepyNavigationPage.class);
     private static final String HOME_PAGE_URL = "https://www.sahibinden.com";
-    private static final int REFRESH_DELAY = 1000;
+    private static final By COOKIE_ACCEPT_BUTTON = By.id("onetrust-accept-btn-handler");
+    private static final By REFURBISHED_PHONES_BUTTON = By.xpath("(//a[@class='sui-button banner-section-buttons'])[1]");
 
     // Desktop view elements
     @FindBy(xpath = "//a[@id='yepy-link-primary']")
@@ -46,9 +48,15 @@ public class YepyNavigationPage extends BasePage {
         super(driver);
     }
 
-    public void setResponsiveMode(boolean isResponsive) {
-        this.isResponsiveMode = isResponsive;
-        logger.info("Responsive mode set to: {}", isResponsive ? "enabled" : "disabled");
+    public boolean setResponsiveMode(boolean isResponsive) {
+        try {
+            this.isResponsiveMode = isResponsive;
+            logger.info("Responsive mode set to: {}", isResponsive ? "enabled" : "disabled");
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to set responsive mode: {}", e.getMessage());
+            return false;
+        }
     }
 
     public boolean detectResponsiveMode() {
@@ -126,14 +134,12 @@ public class YepyNavigationPage extends BasePage {
     public boolean navigateToHomePage() {
         try {
             logger.info("Starting navigation to home page: {}", HOME_PAGE_URL);
-            
-            // Check WebDriver state
+
             if (driver == null) {
                 logger.error("WebDriver is null");
                 return false;
             }
-            
-            // Clear cookies and maximize window
+
             try {
                 driver.manage().deleteAllCookies();
                 if (!detectResponsiveMode()) {
@@ -142,9 +148,9 @@ public class YepyNavigationPage extends BasePage {
                 logger.info("Cleared cookies and configured window size");
             } catch (Exception e) {
                 logger.warn("Failed to clear cookies or configure window: {}", e.getMessage());
+
             }
-            
-            // Navigate to URL
+
             try {
                 driver.get(HOME_PAGE_URL);
                 waitForPageLoad();
@@ -152,13 +158,13 @@ public class YepyNavigationPage extends BasePage {
                 String currentUrl = driver.getCurrentUrl();
                 logger.info("Current URL after navigation: {}", currentUrl);
                 
-                if (currentUrl.contains("sahibinden.com")) {
-                    logger.info("Successfully navigated to home page");
-                    return true;
-                } else {
+                if (!currentUrl.contains("sahibinden.com")) {
                     logger.error("Navigation failed, URL does not contain sahibinden.com");
                     return false;
                 }
+                
+                logger.info("Successfully navigated to home page");
+                return true;
             } catch (Exception e) {
                 logger.error("Error during navigation: {}", e.getMessage());
                 return false;
@@ -191,7 +197,6 @@ public class YepyNavigationPage extends BasePage {
 
     private void navigateToRefurbishedPhonesPage(String deviceType, Function<String, Void> takeScreenshot) {
         try {
-            // Yeni pencereye geç
             String currentWindow = driver.getWindowHandle();
             for (String windowHandle : driver.getWindowHandles()) {
                 if (!windowHandle.equals(currentWindow)) {
@@ -200,33 +205,30 @@ public class YepyNavigationPage extends BasePage {
                     break;
                 }
             }
+
+            waitForCondition(driver -> {
+                return ((JavascriptExecutor) driver)
+                    .executeScript("return document.readyState")
+                    .equals("complete");
+            }, 10, "Page load after window switch");
             
-            // Sayfanın yüklenmesi için bekle
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                logger.error("Interrupted while waiting for page load: {}", e.getMessage());
-            }
             waitForPageLoad();
-            
-            // Yenilenmiş telefonlar linkine tıkla
-            WebElement refurbishedPhonesButton = waitForElementToBeClickable(By.xpath("(//a[@class='sui-button banner-section-buttons'])[1]"));
+
+            WebElement refurbishedPhonesButton = waitForElementToBeClickable(REFURBISHED_PHONES_BUTTON);
             if (refurbishedPhonesButton != null) {
                 clickElement(refurbishedPhonesButton);
                 logger.info("Clicked on refurbished phones link");
 
-                // Sayfanın yüklenmesi için ek bekleme
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    logger.error("Interrupted while waiting for page load: {}", e.getMessage());
-                }
+                waitForCondition(driver -> {
+                    String url = driver.getCurrentUrl();
+                    return url.contains("/yepy/yenilenmis-telefonlar");
+                }, 10, "Navigation to refurbished phones page");
+                
                 waitForPageLoad();
             } else {
                 throw new IllegalStateException("Refurbished phones button not found");
             }
 
-            // URL kontrolü
             waitForPageLoad();
             String currentUrl = driver.getCurrentUrl();
             boolean isCorrectUrl = currentUrl.contains("/yepy/yenilenmis-telefonlar");
@@ -256,19 +258,19 @@ public class YepyNavigationPage extends BasePage {
         }
     }
 
-    @Override
-    public void acceptCookies() {
+    public boolean acceptCookies() {
         try {
-            logger.info("Attempting to accept cookies");
-            WebElement cookieButton = waitForElementToBeClickable(By.id("onetrust-accept-btn-handler"));
+            WebElement cookieButton = waitForElementToBeClickable(COOKIE_ACCEPT_BUTTON);
             if (cookieButton != null) {
                 cookieButton.click();
-                logger.info("Successfully clicked cookie accept button");
+                logger.info("Cookies accepted");
             } else {
-                logger.warn("Cookie accept button not found");
+                logger.info("Cookie button not found or not clickable");
             }
+            return true;
         } catch (Exception e) {
-            logger.error("Error accepting cookies: {}", e.getMessage());
+            logger.info("No cookie dialog found or already handled: {}", e.getMessage());
+            return false;
         }
     }
 

@@ -1,7 +1,6 @@
 package com.sahibinden.base;
 
 import com.sahibinden.util.ResponsiveTestHelper;
-import io.qameta.allure.Allure;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.openqa.selenium.OutputType;
@@ -14,6 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 
 @SpringBootTest
@@ -38,11 +43,9 @@ public abstract class BaseTest {
                 throw new IllegalStateException("Driver must be initialized before setUp");
             }
 
-            // Configure timeouts
             driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
             driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(timeout));
-            
-            // Configure window size based on responsive mode
+
             if (responsiveTestHelper != null && responsiveTestHelper.isResponsiveMode()) {
                 logger.info("Configuring responsive mode with dimensions: {}", 
                         responsiveTestHelper.getResponsiveDimensions());
@@ -74,16 +77,17 @@ public abstract class BaseTest {
         }
     }
 
-    /**
-     * Takes a screenshot and attaches it to the Allure report
-     * @param name The name of the screenshot
-     */
     protected void takeScreenshot(String name) {
         try {
             if (driver instanceof TakesScreenshot) {
                 byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-                Allure.addAttachment(name, new ByteArrayInputStream(screenshot));
-                logger.info("Screenshot taken: {}", name);
+
+                Path screenshotDir = Paths.get("target", "screenshots");
+                Files.createDirectories(screenshotDir);
+                Path screenshotPath = screenshotDir.resolve(name + ".png");
+                Files.write(screenshotPath, screenshot);
+                
+                logger.info("Screenshot saved to: {}", screenshotPath);
             }
         } catch (Exception e) {
             logger.error("Error taking screenshot: {}", e.getMessage());
