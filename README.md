@@ -4,7 +4,7 @@ This project contains automated tests for Sahibinden.com Yepy pages using Seleni
 
 ## Requirements
 
-- Java 11 or higher
+- Java 17 (compiled with Java 11 compatibility)
 - Maven 3.8.4 or higher
 - Chrome browser
 - Docker and Docker Compose (for Jenkins integration)
@@ -63,7 +63,7 @@ The framework includes the following test scenarios:
 
 1. Clone the project:
 ```bash
-git clone https://github.com/yourusername/sahibinden-test-automation.git
+git clone https://github.com/ezgibektas/sahibinden-test-automation.git
 cd sahibinden-test-automation
 ```
 

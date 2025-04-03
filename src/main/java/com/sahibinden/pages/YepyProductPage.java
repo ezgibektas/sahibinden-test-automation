@@ -18,9 +18,7 @@ import org.openqa.selenium.By;
 public class YepyProductPage extends BasePage {
 
     private static final Logger logger = LoggerFactory.getLogger(YepyProductPage.class);
-    private static final int DEFAULT_TIMEOUT = 10;
 
-    // Desktop view elements
     @FindBy(xpath = "//div[@class='refurbishment-content-box']")
     private WebElement firstPhone;
 
@@ -42,7 +40,6 @@ public class YepyProductPage extends BasePage {
     @FindBy(css = "div[class='sui-color-emphasis-high sui-global-surface-body-lead-semibold searchResultsTagAttributeValue']")
     private List<WebElement> applePhoneList;
 
-    // Mobile view elements
     @FindBy(xpath = "//h2[@class='refurbishment-item-content-title sui-global-surface-body-semibold sui-color-emphasis-high']")
     private List<WebElement> mobileApplePhoneList;
 

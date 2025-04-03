@@ -21,7 +21,6 @@ public class YepyNavigationPage extends BasePage {
     private static final By COOKIE_ACCEPT_BUTTON = By.id("onetrust-accept-btn-handler");
     private static final By REFURBISHED_PHONES_BUTTON = By.xpath("(//a[@class='sui-button banner-section-buttons'])[1]");
 
-    // Desktop view elements
     @FindBy(xpath = "//a[@id='yepy-link-primary']")
     private WebElement yepyLink;
 
@@ -31,7 +30,6 @@ public class YepyNavigationPage extends BasePage {
     @FindBy(xpath = "(//a[@class='sui-button'])[1]")
     private WebElement refurbishedPhonesButton;
 
-    // Mobile view elements
     @FindBy(css = ".sui-navbar__responsive-menu-toggle")
     private WebElement mobileMenuToggle;
 
